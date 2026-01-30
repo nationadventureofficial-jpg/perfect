@@ -40,34 +40,40 @@ export default function ContactForm({ form }: ContactFormProps) {
   }
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitStatus("idle");
+
     if (isFormSubmit) {
-      // FormSubmit handles submission natively
-      // Add hidden input for redirect URL
+      // Use FormSubmit's AJAX endpoint to avoid page redirect
       const form = e.currentTarget;
-      let redirectInput = form.querySelector('input[name="_next"]') as HTMLInputElement;
-      if (!redirectInput) {
-        redirectInput = document.createElement('input');
-        redirectInput.type = 'hidden';
-        redirectInput.name = '_next';
-        redirectInput.value = window.location.href + '?success=true';
-        form.appendChild(redirectInput);
-      }
+      const formData = new FormData(form);
       
-      // Add subject if not present
-      let subjectInput = form.querySelector('input[name="_subject"]') as HTMLInputElement;
-      if (!subjectInput) {
-        subjectInput = document.createElement('input');
-        subjectInput.type = 'hidden';
-        subjectInput.name = '_subject';
-        subjectInput.value = form.action.includes('booking') 
-          ? 'New Booking Request - Perfectly Pampered Parties'
-          : 'New Contact Form Submission - Perfectly Pampered Parties';
-        form.appendChild(subjectInput);
-      }
+      // Add subject based on form type
+      const subject = form.action.includes('booking') 
+        ? 'New Booking Request - Perfectly Pampered Parties'
+        : 'New Contact Form Submission - Perfectly Pampered Parties';
+      formData.append('_subject', subject);
+      formData.append('_captcha', 'false'); // Disable captcha for better UX
       
-      setIsSubmitting(true);
-      // FormSubmit will handle the submission and redirect
-      return; // Let native form submission happen
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (response.ok || response.status === 200) {
+          setSubmitStatus("success");
+          form.reset();
+        } else {
+          setSubmitStatus("error");
+        }
+      } catch (error) {
+        setSubmitStatus("error");
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
     }
 
     // Original API route handling
@@ -104,8 +110,6 @@ export default function ContactForm({ form }: ContactFormProps) {
     <div className="bg-surface rounded-card p-6 md:p-8 shadow-card max-w-2xl mx-auto">
       <form 
         onSubmit={handleSubmit} 
-        action={isFormSubmit ? form.action : undefined}
-        method={isFormSubmit ? "POST" : undefined}
         className="space-y-6"
       >
         {form.fields.map((field) => (

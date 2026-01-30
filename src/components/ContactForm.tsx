@@ -45,30 +45,43 @@ export default function ContactForm({ form }: ContactFormProps) {
     setSubmitStatus("idle");
 
     if (isFormSubmit) {
-      // Use FormSubmit's AJAX endpoint to avoid page redirect
+      // Use FormSubmit's AJAX endpoint
       const form = e.currentTarget;
       const formData = new FormData(form);
+      
+      // Extract email from action URL (formsubmit.co/email@example.com)
+      const emailMatch = form.action.match(/formsubmit\.co\/(.+)/);
+      const email = emailMatch ? emailMatch[1] : 'hello@perfectlypamperedparties.co.uk';
       
       // Add subject based on form type
       const subject = form.action.includes('booking') 
         ? 'New Booking Request - Perfectly Pampered Parties'
         : 'New Contact Form Submission - Perfectly Pampered Parties';
       formData.append('_subject', subject);
-      formData.append('_captcha', 'false'); // Disable captcha for better UX
+      formData.append('_captcha', 'false');
+      formData.append('_template', 'box'); // Clean template
       
       try {
-        const response = await fetch(form.action, {
+        // Use FormSubmit's AJAX endpoint
+        const response = await fetch(`https://formsubmit.co/ajax/${email}`, {
           method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+          },
           body: formData,
         });
 
-        if (response.ok || response.status === 200) {
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
           setSubmitStatus("success");
           form.reset();
         } else {
+          console.error('FormSubmit error:', data);
           setSubmitStatus("error");
         }
       } catch (error) {
+        console.error('Form submission error:', error);
         setSubmitStatus("error");
       } finally {
         setIsSubmitting(false);

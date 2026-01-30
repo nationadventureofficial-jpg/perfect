@@ -28,7 +28,49 @@ export default function ContactForm({ form }: ContactFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
 
+  // Check if using FormSubmit (form-to-email service)
+  const isFormSubmit = form.action.startsWith("https://formsubmit.co");
+
+  // Check for success parameter in URL (FormSubmit redirects back)
+  if (typeof window !== 'undefined') {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('success') === 'true' && submitStatus !== 'success') {
+      setSubmitStatus('success');
+    }
+  }
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    if (isFormSubmit) {
+      // FormSubmit handles submission natively
+      // Add hidden input for redirect URL
+      const form = e.currentTarget;
+      let redirectInput = form.querySelector('input[name="_next"]') as HTMLInputElement;
+      if (!redirectInput) {
+        redirectInput = document.createElement('input');
+        redirectInput.type = 'hidden';
+        redirectInput.name = '_next';
+        redirectInput.value = window.location.href + '?success=true';
+        form.appendChild(redirectInput);
+      }
+      
+      // Add subject if not present
+      let subjectInput = form.querySelector('input[name="_subject"]') as HTMLInputElement;
+      if (!subjectInput) {
+        subjectInput = document.createElement('input');
+        subjectInput.type = 'hidden';
+        subjectInput.name = '_subject';
+        subjectInput.value = form.action.includes('booking') 
+          ? 'New Booking Request - Perfectly Pampered Parties'
+          : 'New Contact Form Submission - Perfectly Pampered Parties';
+        form.appendChild(subjectInput);
+      }
+      
+      setIsSubmitting(true);
+      // FormSubmit will handle the submission and redirect
+      return; // Let native form submission happen
+    }
+
+    // Original API route handling
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitStatus("idle");
@@ -60,7 +102,12 @@ export default function ContactForm({ form }: ContactFormProps) {
 
   return (
     <div className="bg-surface rounded-card p-6 md:p-8 shadow-card max-w-2xl mx-auto">
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form 
+        onSubmit={handleSubmit} 
+        action={isFormSubmit ? form.action : undefined}
+        method={isFormSubmit ? "POST" : undefined}
+        className="space-y-6"
+      >
         {form.fields.map((field) => (
           <div key={field.name}>
             <label

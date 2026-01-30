@@ -41,7 +41,8 @@ export default function ContactPage() {
               <ContactForm
                 form={{
                   method: "POST",
-                  action: "/api/contact",
+                  action: "https://formsubmit.co/hello@perfectlypamperedparties.co.uk",
+                  successMessage: "Your message has been sent successfully! We'll get back to you soon.",
                   fields: [
                     { type: "text", name: "name", label: "Name", required: true, placeholder: "Your full name" },
                     { type: "email", name: "email", label: "Email", required: true, placeholder: "you@example.com" },

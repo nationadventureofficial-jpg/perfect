@@ -19,7 +19,7 @@ export default function BookingPage() {
           <ContactForm
             form={{
               method: "POST",
-              action: "/api/book",
+              action: "https://formsubmit.co/hello@perfectlypamperedparties.co.uk",
               successMessage:
                 "Your booking request has been successfully submitted. We will contact you shortly to confirm your party details. Thank you!",
               fields: [

@@ -8,7 +8,7 @@ type ContactPayload = {
   [key: string]: unknown;
 };
 
-const defaultToAddress = "jon@idea21.co.uk";
+const defaultToAddress = "hello@perfectlypamperedparties.co.uk";
 
 function getTransporter() {
   const host = process.env.SMTP_HOST;

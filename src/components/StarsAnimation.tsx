@@ -10,6 +10,7 @@ interface Star {
   speed: number;
   baseOpacity: number;
   initialY: number;
+  opacity?: number;
 }
 
 interface StarsAnimationProps {
@@ -131,7 +132,7 @@ export default function StarsAnimation({ count = 60, className = "" }: StarsAnim
             top: `${star.y}%`,
             width: `${star.size * 2}px`,
             height: `${star.size * 2}px`,
-            opacity: star.opacity,
+            opacity: star.opacity ?? star.baseOpacity,
             transform: `translate(-50%, -50%)`,
             willChange: "transform, opacity",
           }}

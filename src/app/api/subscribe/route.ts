@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { sendContactEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    // Log the subscription request (in production, this would save to database or email service)
-    console.log("Newsletter subscription received:", body);
-    
-    // TODO: Integrate with email marketing service (e.g., Mailchimp, ConvertKit) or database
-    // Example:
-    // await addToNewsletter(body.email);
+    // Send newsletter subscription notification email
+    await sendContactEmail({
+      name: "Newsletter Subscriber",
+      email: body.email,
+      message: "New newsletter subscription request",
+    });
     
     return NextResponse.json(
       { message: "Subscription successful" },

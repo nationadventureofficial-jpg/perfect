@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { cn } from "@/lib/utils";
 
 interface FormField {
@@ -32,62 +32,64 @@ export default function ContactForm({ form }: ContactFormProps) {
   const isFormSubmit = form.action.startsWith("https://formsubmit.co");
 
   // Check for success parameter in URL (FormSubmit redirects back)
-  if (typeof window !== 'undefined') {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('success') === 'true' && submitStatus !== 'success') {
-      setSubmitStatus('success');
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('success') === 'true') {
+        setSubmitStatus('success');
+        // Clean URL
+        window.history.replaceState({}, '', window.location.pathname);
+      }
     }
-  }
+  }, []);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    if (isFormSubmit) {
+      // FormSubmit works best with native form submission
+      // Add hidden fields for better configuration
+      const form = e.currentTarget;
+      
+      // Add redirect URL to come back to this page with success
+      let nextInput = form.querySelector('input[name="_next"]') as HTMLInputElement;
+      if (!nextInput) {
+        nextInput = document.createElement('input');
+        nextInput.type = 'hidden';
+        nextInput.name = '_next';
+        nextInput.value = window.location.origin + window.location.pathname + '?success=true';
+        form.appendChild(nextInput);
+      }
+      
+      // Add subject
+      let subjectInput = form.querySelector('input[name="_subject"]') as HTMLInputElement;
+      if (!subjectInput) {
+        subjectInput = document.createElement('input');
+        subjectInput.type = 'hidden';
+        subjectInput.name = '_subject';
+        subjectInput.value = form.action.includes('booking') 
+          ? 'New Booking Request - Perfectly Pampered Parties'
+          : 'New Contact Form Submission - Perfectly Pampered Parties';
+        form.appendChild(subjectInput);
+      }
+      
+      // Disable captcha for better UX
+      let captchaInput = form.querySelector('input[name="_captcha"]') as HTMLInputElement;
+      if (!captchaInput) {
+        captchaInput = document.createElement('input');
+        captchaInput.type = 'hidden';
+        captchaInput.name = '_captcha';
+        captchaInput.value = 'false';
+        form.appendChild(captchaInput);
+      }
+      
+      // Let native form submission happen - FormSubmit will redirect back
+      setIsSubmitting(true);
+      return; // Don't prevent default - let form submit naturally
+    }
+
+    // Original API route handling
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitStatus("idle");
-
-    if (isFormSubmit) {
-      // Use FormSubmit's AJAX endpoint
-      const form = e.currentTarget;
-      const formData = new FormData(form);
-      
-      // Extract email from action URL (formsubmit.co/email@example.com)
-      const emailMatch = form.action.match(/formsubmit\.co\/(.+)/);
-      const email = emailMatch ? emailMatch[1] : 'hello@perfectlypamperedparties.co.uk';
-      
-      // Add subject based on form type
-      const subject = form.action.includes('booking') 
-        ? 'New Booking Request - Perfectly Pampered Parties'
-        : 'New Contact Form Submission - Perfectly Pampered Parties';
-      formData.append('_subject', subject);
-      formData.append('_captcha', 'false');
-      formData.append('_template', 'box'); // Clean template
-      
-      try {
-        // Use FormSubmit's AJAX endpoint
-        const response = await fetch(`https://formsubmit.co/ajax/${email}`, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-          },
-          body: formData,
-        });
-
-        const data = await response.json();
-        
-        if (response.ok && data.success) {
-          setSubmitStatus("success");
-          form.reset();
-        } else {
-          console.error('FormSubmit error:', data);
-          setSubmitStatus("error");
-        }
-      } catch (error) {
-        console.error('Form submission error:', error);
-        setSubmitStatus("error");
-      } finally {
-        setIsSubmitting(false);
-      }
-      return;
-    }
 
     // Original API route handling
     e.preventDefault();
@@ -122,7 +124,9 @@ export default function ContactForm({ form }: ContactFormProps) {
   return (
     <div className="bg-surface rounded-card p-6 md:p-8 shadow-card max-w-2xl mx-auto">
       <form 
-        onSubmit={handleSubmit} 
+        onSubmit={handleSubmit}
+        action={isFormSubmit ? form.action : undefined}
+        method={isFormSubmit ? "POST" : undefined}
         className="space-y-6"
       >
         {form.fields.map((field) => (

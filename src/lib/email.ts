@@ -17,7 +17,7 @@ function getTransporter() {
   const pass = process.env.SMTP_PASS;
 
   if (!host || !port || !user || !pass) {
-    throw new Error("SMTP environment variables are not fully configured");
+    return null; // Return null instead of throwing - allows graceful fallback
   }
 
   return nodemailer.createTransport({
@@ -63,12 +63,33 @@ export async function sendContactEmail(payload: ContactPayload) {
   }
 
   const textBody = lines.join("\n");
+  const toEmail = process.env.CONTACT_TO_EMAIL || defaultToAddress;
 
-  await transporter.sendMail({
-    from: `"Perfectly Pampered Parties Website" <${process.env.SMTP_FROM || defaultToAddress}>`,
-    to: process.env.CONTACT_TO_EMAIL || defaultToAddress,
-    subject: "New enquiry from Perfectly Pampered Parties website",
-    text: textBody,
-  });
+  // If SMTP is configured, send email. Otherwise, log to console (for Vercel logs)
+  if (transporter) {
+    try {
+      await transporter.sendMail({
+        from: `"Perfectly Pampered Parties Website" <${process.env.SMTP_FROM || defaultToAddress}>`,
+        to: toEmail,
+        subject: "New enquiry from Perfectly Pampered Parties website",
+        text: textBody,
+      });
+      console.log(`Email sent successfully to ${toEmail}`);
+    } catch (error) {
+      console.error("Failed to send email:", error);
+      // Log the data so it's not lost
+      console.log("Form submission data (email failed):", textBody);
+      throw error; // Re-throw so API route knows email failed
+    }
+  } else {
+    // SMTP not configured - log the data to Vercel logs instead
+    console.log("=".repeat(50));
+    console.log("FORM SUBMISSION (SMTP not configured):");
+    console.log(`To: ${toEmail}`);
+    console.log("Subject: New enquiry from Perfectly Pampered Parties website");
+    console.log(textBody);
+    console.log("=".repeat(50));
+    // Don't throw - allow form to succeed even without email
+  }
 }
 
